@@ -9,11 +9,15 @@ application = Flask(__name__)
 
 app = application
 
-def databricks_connection_request(start_index_value,end_index_value):
+def databricks_connection_request(start_index_value,end_index_value,json_path):
+    with open(r'/usr/app/src/Creds.json', 'r') as f:
+        data = json.load(f)
 
-    token = 'dapi969357e850f42e92050e67fee0a9de73-3'
+
+
+    token = data['token']
     db = DatabricksAPI(
-        host="https://adb-2857568921143049.9.azuredatabricks.net/",
+        host=data['url'],
         token=token
     )
     list_arg=[start_index_value,end_index_value]
@@ -21,7 +25,7 @@ def databricks_connection_request(start_index_value,end_index_value):
 
     job_payload = {
         "run_name": 'just_a_run',
-        "existing_cluster_id": '0423-212957-vl2qhpwd',
+        "existing_cluster_id": data['cluster_id'],
         "notebook_task":
             {
                 "notebook_path": '/Shared/MetaDatarepliaction_Backend_Code/Back_End_code',
@@ -29,8 +33,11 @@ def databricks_connection_request(start_index_value,end_index_value):
 
             }
     }
-    resp = requests.post('https://adb-2857568921143049.9.azuredatabricks.net/api/2.0/jobs/runs/submit',
-                         json=job_payload, headers={'Authorization': 'Bearer dapi969357e850f42e92050e67fee0a9de73-3'})
+    submit_url=data['url'] + 'api/2.0/jobs/runs/submit'
+
+    resp = requests.post(submit_url,
+                         json=job_payload, headers={'Authorization': 'Bearer ' + data['token']})
+
     run_id = int(resp.text[10:-1])
     final_result = db.jobs.get_run_output(run_id=run_id)
     print(final_result, job_payload)
@@ -78,7 +85,8 @@ def output_range():
                          "end_hour": hour
 
                          }
-    a=databricks_connection_request(start_index_value,end_index_value)
+    json_path=""
+    a=databricks_connection_request(start_index_value,end_index_value,json_path)
     print(a)
 
     return a
